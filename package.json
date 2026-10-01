@@ -1,0 +1,10 @@
+{
+  "name": "radar-integration-hub",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Laboratório de consultas CRM com governança e adaptador Nango opcional",
+  "engines": { "node": ">=22" },
+  "scripts": { "test": "node --test", "demo": "node src/cli.mjs" },
+  "license": "MIT"
+}
