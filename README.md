@@ -2,7 +2,7 @@
 
 Laboratório autoral de integrações governadas para o ecossistema Radar. Primeira hipótese: consultar uma amostra do funil CRM do Camaleão Growth com OAuth administrado pelo Nango e políticas controladas pelo backend.
 
-**Status:** laboratório local; demonstração com dados fictícios. O adaptador REST para Nango Cloud foi testado com transporte simulado, sem conta, OAuth ou CRM reais. Não há implantação em produção.
+**Status:** laboratório local; demonstração com dados fictícios. O adaptador REST para Nango Cloud foi testado com transporte simulado, sem conta, OAuth ou CRM reais. O adaptador OpenClaw e o servidor de leitura foram exercitados por HTTP local real, com CRM fictício. O carregamento no Gateway OpenClaw ainda não foi homologado. Não há implantação em produção.
 
 ## Executar
 
@@ -31,7 +31,30 @@ A demonstração retorna três negócios fictícios, agregados por etapa. Essa a
 | Falhas | Códigos de erro sem corpo do provedor ou credenciais |
 | Escritas | Bloqueadas; não existe mecanismo de aprovação para liberá-las nesta versão |
 
-A CLI é usada por um operador local e não autentica usuários remotos. O parâmetro `authenticatedTenantId` só é seguro quando uma futura API o obtiver de uma sessão verificada; nunca deve vir do corpo enviado pelo cliente ou de um LLM. Não há servidor HTTP ou MCP nesta versão.
+A CLI é usada por um operador local e não autentica usuários remotos. O parâmetro `authenticatedTenantId` deve vir de contexto confiável; nunca deve vir do corpo enviado pelo cliente ou de um LLM. O novo servidor HTTP local autentica uma credencial de serviço, vinculada a um único tenant configurado pelo operador. Isso não representa identidade de usuário final nem isolamento SaaS. Não há servidor MCP nesta versão.
+
+## Assistente OpenClaw: integração original
+
+O módulo `plugins/openclaw-radar` oferece somente `radar_crm_preview`. A ferramenta não recebe argumentos de tenant, URL, credencial, provedor ou ação. O servidor decide o vínculo e conserva a cota, o bloqueio de duplicatas e a lista de ações permitidas.
+
+```bash
+npm run demo:openclaw
+```
+
+Essa demonstração inicia um servidor em `127.0.0.1` com token aleatório apenas em memória, chama a implementação da ferramenta e encerra tudo. Usa HTTP real e CRM fictício; não inicia o Gateway nem chama LLM, Nango ou HubSpot. Não exige instalação do OpenClaw.
+
+Para configuração e homologação no Gateway, consulte [docs/OPENCLAW.md](docs/OPENCLAW.md). O SDK é experimental; a versão de referência é `2026.9.7`, ainda pendente de teste de carregamento. Tokens de serviço ficam no processo, fora de prompts e schemas. O token de operador do Gateway não é usado para autenticar o Hub.
+
+## Bridge local para outros runtimes internos
+
+O adapter original `src/runtime-cli.mjs` reutiliza a ferramenta e o servidor local existentes por JSON Lines. Aceita apenas `radar_crm_preview` e argumentos vazios; tenant e vínculo continuam no serviço configurado pelo operador. Há limites de entrada, mensagens, timeout e duração da sessão, com replay preservado no ledger. Não adiciona dependências.
+
+```bash
+node src/runtime-cli.mjs --describe
+node --env-file=.env.runtime-test src/runtime-cli.mjs
+```
+
+O segundo comando requer o serviço local e sua credencial limitada. Consulte [docs/RUNTIME_BRIDGE.md](docs/RUNTIME_BRIDGE.md) para preparação sintética, contrato e limites. É um bridge genérico JSONL, não um servidor MCP ou plugin nativo Hermes. O carregamento e a configuração efetiva de ferramentas no host permanecem pendentes de homologação.
 
 ## Adaptador opcional para conta de teste
 
@@ -59,4 +82,5 @@ O ledger fica em `.state/`, ignorado pelo Git. É uma proteção local por diret
 
 ## Autoria e licença
 
-Repositório independente, com código original Radar e licença MIT para estes arquivos. Não inclui nem redistribui o núcleo do Nango. Nango é um componente externo de Nango Inc, avaliado no commit `7e61a4c97b5a638bcf01808016099de2fe2f9985`, sob **Elastic License 2.0**. A MIT deste projeto não altera a licença do Nango. Veja [NOTICE](NOTICE.md).
+Repositório independente, de **Carlos Felipe (`ofelipepeixoto`)**, com código original Radar e licença MIT para estes arquivos. Não inclui nem redistribui os núcleos do Nango ou OpenClaw. Nango é componente externo de Nango Inc, sob **Elastic License 2.0**. OpenClaw é componente externo da OpenClaw Foundation, sob **MIT**, avaliado na release `2026.9.7`. A MIT deste projeto não altera direitos sobre dependências, serviços e marcas. Veja [NOTICE](NOTICE.md) e [política de autoria](docs/AUTORIA.md).
+

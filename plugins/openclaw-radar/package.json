@@ -1,0 +1,14 @@
+{
+  "name": "@ofelipepeixoto/openclaw-radar-readonly",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "author": "Carlos Felipe (ofelipepeixoto)",
+  "license": "MIT",
+  "files": ["index.mjs", "tool.mjs", "openclaw.plugin.json", "LICENSE"],
+  "peerDependencies": { "openclaw": "2026.9.7" },
+  "openclaw": {
+    "extensions": ["./index.mjs"],
+    "compat": { "minGatewayVersion": "2026.9.7", "pluginApi": "2026.9.7" }
+  }
+}
