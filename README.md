@@ -45,6 +45,17 @@ Essa demonstração inicia um servidor em `127.0.0.1` com token aleatório apena
 
 Para configuração e homologação no Gateway, consulte [docs/OPENCLAW.md](docs/OPENCLAW.md). O SDK é experimental; a versão de referência é `2026.9.7`, ainda pendente de teste de carregamento. Tokens de serviço ficam no processo, fora de prompts e schemas. O token de operador do Gateway não é usado para autenticar o Hub.
 
+## Bridge local para outros runtimes internos
+
+O adapter original `src/runtime-cli.mjs` reutiliza a ferramenta e o servidor local existentes por JSON Lines. Aceita apenas `radar_crm_preview` e argumentos vazios; tenant e vínculo continuam no serviço configurado pelo operador. Há limites de entrada, mensagens, timeout e duração da sessão, com replay preservado no ledger. Não adiciona dependências.
+
+```bash
+node src/runtime-cli.mjs --describe
+node --env-file=.env.runtime-test src/runtime-cli.mjs
+```
+
+O segundo comando requer o serviço local e sua credencial limitada. Consulte [docs/RUNTIME_BRIDGE.md](docs/RUNTIME_BRIDGE.md) para preparação sintética, contrato e limites. É um bridge genérico JSONL, não um servidor MCP ou plugin nativo Hermes. O carregamento e a configuração efetiva de ferramentas no host permanecem pendentes de homologação.
+
 ## Adaptador opcional para conta de teste
 
 1. Configure no Nango uma integração HubSpot e uma conexão com permissões mínimas de leitura.
@@ -72,3 +83,4 @@ O ledger fica em `.state/`, ignorado pelo Git. É uma proteção local por diret
 ## Autoria e licença
 
 Repositório independente, de **Carlos Felipe (`ofelipepeixoto`)**, com código original Radar e licença MIT para estes arquivos. Não inclui nem redistribui os núcleos do Nango ou OpenClaw. Nango é componente externo de Nango Inc, sob **Elastic License 2.0**. OpenClaw é componente externo da OpenClaw Foundation, sob **MIT**, avaliado na release `2026.9.7`. A MIT deste projeto não altera direitos sobre dependências, serviços e marcas. Veja [NOTICE](NOTICE.md) e [política de autoria](docs/AUTORIA.md).
+
