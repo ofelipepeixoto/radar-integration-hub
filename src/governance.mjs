@@ -189,6 +189,7 @@ export class GovernanceStore {
       .run(receiptId, approvalId, proposal.tenant, proposal.hash, actorHash(principal), this.#clock());
     this.#event(proposal.tenant, 'approval.consumed', receiptId, principal);
     return { receiptId, approvalId, hash: proposal.hash, tenantId: proposal.tenant,
+      proposalId: proposal.id, version: proposal.version, expiresAt: approval.expires,
       action: proposal.action, scope: 'local-approval-receipt-only' };
   }
   consumeApproval(reference, approvalId, principal) {
@@ -236,6 +237,9 @@ export class GovernanceStore {
     return this.#transaction(() => {
       const row = this.#reservation(tenantId, reservationId, principal);
       if (row.state !== 'held') fail('RESERVATION_STATE_DENIED');
+      const approval = this.#db.prepare('SELECT * FROM approvals WHERE id=?').get(row.approval);
+      if (!approval || approval.expires <= this.#clock()) fail('APPROVAL_EXPIRED');
+      this.#proposal({ tenantId, proposalId: approval.proposal, version: approval.version, hash: approval.hash });
       this.#db.prepare("UPDATE reservations SET state='started' WHERE id=?").run(reservationId);
       this.#event(tenantId, 'budget.started', reservationId, principal);
       return { state: 'started', reservationId };
