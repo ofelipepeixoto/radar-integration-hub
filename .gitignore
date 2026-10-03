@@ -5,3 +5,5 @@ node_modules/
 .state/
 coverage/
 *.log
+__pycache__/
+*.py[cod]

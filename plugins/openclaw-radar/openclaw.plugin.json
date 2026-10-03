@@ -1,0 +1,11 @@
+{
+  "id": "radar-hub-readonly",
+  "name": "Radar Hub Read Only",
+  "version": "0.1.0",
+  "description": "Consulta CRM amostral governada no servidor Radar.",
+  "categories": ["other"],
+  "activation": { "onStartup": true },
+  "configSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+  "contracts": { "tools": ["radar_crm_preview"] },
+  "toolMetadata": { "radar_crm_preview": { "optional": true } }
+}
