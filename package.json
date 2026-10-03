@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "description": "Laboratório de consultas CRM com governança e adaptador Nango opcional",
-  "engines": { "node": ">=22" },
-  "scripts": { "test": "node --test", "demo": "node src/cli.mjs" },
+  "engines": { "node": ">=22.13" },
+  "author": "Carlos Felipe (ofelipepeixoto)",
+  "scripts": { "test": "node --test", "demo": "node src/cli.mjs",
+    "demo:openclaw": "node src/openclaw-demo.mjs", "serve:readonly": "node src/service-cli.mjs" },
   "license": "MIT"
 }
