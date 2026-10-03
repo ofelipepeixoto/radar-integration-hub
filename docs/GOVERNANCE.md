@@ -29,7 +29,7 @@ Para um experimento sintético, o operador pode construir o store com `paidEnabl
 `reservePaid` consome a aprovação e reserva o limite **na mesma transação**, antes de qualquer chamada. Retorna `providerCalled: false`: o módulo nunca chama um provedor. O futuro adapter deve calcular um teto conservador, limitar tokens/iterações/timeout no executor e respeitar o estado persistente:
 
 - `held`: reserva persistida; pode ser cancelada somente antes de iniciar.
-- `started`: registrar **antes** de enviar a chamada. Essa fronteira revalida expiração e versão/hash atuais; uma reserva antiga não pode iniciar uma proposta revisada. Um crash/timeout mantém o valor inteiro reservado; não fazer retry automático nem assumir custo zero.
+- `started`: registrar **antes** de enviar a chamada. Essa fronteira revalida configuração de pagamento, bloqueio do tenant, limite atual, expiração e versão/hash; uma reserva antiga não permite contornar pagamento desabilitado, orçamento reduzido, overrun ou proposta revisada. Um crash/timeout mantém o valor inteiro reservado; não fazer retry automático nem assumir custo zero.
 - `settled`: `reconcile` registra custo real obtido pelo backend de uma fonte contábil confiável. Libera apenas a diferença autorizada.
 - `overrun`: custo real acima da reserva é registrado, e o tenant fica bloqueado para novas reservas. Não existe desbloqueio automático.
 - `cancelled`: libera uma reserva não iniciada; não devolve a aprovação consumida nem torna o ID reutilizável.

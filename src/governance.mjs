@@ -199,6 +199,13 @@ export class GovernanceStore {
       return this.#consume(reference, approvalId, principal);
     });
   }
+  #budgetUsage(tenantId, day) {
+    // Unresolved requests from earlier days also hold today's capacity.
+    return this.#db.prepare(`SELECT COALESCE(SUM(CASE WHEN state IN ('held','started') THEN maximum
+      ELSE actual END),0) AS amount FROM reservations WHERE tenant=? AND
+      (state IN ('held','started') OR (day=? AND state IN ('settled','overrun')))`)
+      .get(tenantId, day).amount;
+  }
   reservePaid(reference, approvalId, reservationId, maximumMicros, principal) {
     this.#identity(principal, reference?.tenantId, 'executor');
     if (!this.#paidEnabled) fail('PAID_CALLS_DISABLED');
@@ -213,10 +220,7 @@ export class GovernanceStore {
       const day = new Date(this.#clock()).toISOString().slice(0, 10);
       // Started/held reservations remain charged until reconciliation, even after a restart.
       // An unresolved request from a previous day also holds today's capacity.
-      const used = this.#db.prepare(`SELECT COALESCE(SUM(CASE WHEN state IN ('held','started') THEN maximum
-        ELSE actual END),0) AS amount FROM reservations WHERE tenant=? AND
-        (state IN ('held','started') OR (day=? AND state IN ('settled','overrun')))`)
-        .get(reference.tenantId, day).amount;
+      const used = this.#budgetUsage(reference.tenantId, day);
       const limit = this.#limits[reference.tenantId] ?? 0;
       if (!money(used) || maximumMicros > limit || used > limit - maximumMicros) fail('BUDGET_EXCEEDED');
       const receipt = this.#consume(reference, approvalId, principal);
@@ -237,6 +241,10 @@ export class GovernanceStore {
     return this.#transaction(() => {
       const row = this.#reservation(tenantId, reservationId, principal);
       if (row.state !== 'held') fail('RESERVATION_STATE_DENIED');
+      if (!this.#paidEnabled) fail('PAID_CALLS_DISABLED');
+      if (this.#db.prepare('SELECT tenant FROM blocks WHERE tenant=?').get(tenantId)) fail('BUDGET_BLOCKED');
+      const used = this.#budgetUsage(tenantId, new Date(this.#clock()).toISOString().slice(0, 10));
+      if (!money(used) || used > (this.#limits[tenantId] ?? 0)) fail('BUDGET_EXCEEDED');
       const approval = this.#db.prepare('SELECT * FROM approvals WHERE id=?').get(row.approval);
       if (!approval || approval.expires <= this.#clock()) fail('APPROVAL_EXPIRED');
       this.#proposal({ tenantId, proposalId: approval.proposal, version: approval.version, hash: approval.hash });

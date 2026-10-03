@@ -195,6 +195,30 @@ test('fronteira de início revalida expiração e revisão depois de reservar; r
   assert.throws(() => f.store.markStarted('tenant', 'changed', f.executor), { code: 'PROPOSAL_CHANGED' });
   assert.equal(f.store.cancelBeforeStart('tenant', 'changed', f.executor).state, 'cancelled');
 });
+test('reinício com pago desabilitado ou limite reduzido impede iniciar reserva existente', async t => {
+  const enabled = { paidEnabled: true, dailyLimitsMicros: { tenant: 100 } };
+  const f = await fixture(t, enabled), { reference, approval } = f.approved('paid', true);
+  f.store.reservePaid(reference, approval.approvalId, 'held', 100, f.executor);
+  f.reopen({ paidEnabled: false, dailyLimitsMicros: { tenant: 100 } });
+  assert.throws(() => f.store.markStarted('tenant', 'held', f.executor), { code: 'PAID_CALLS_DISABLED' });
+  for (const limit of [0, 99]) {
+    f.reopen({ paidEnabled: true, dailyLimitsMicros: { tenant: limit } });
+    assert.throws(() => f.store.markStarted('tenant', 'held', f.executor), { code: 'BUDGET_EXCEEDED' });
+  }
+  f.reopen(enabled);
+  assert.equal(f.store.markStarted('tenant', 'held', f.executor).state, 'started');
+});
+test('overrun de uma chamada bloqueia início de outra reserva já existente', async t => {
+  const f = await fixture(t, { paidEnabled: true, dailyLimitsMicros: { tenant: 1000 } });
+  const first = f.approved('first', true), second = f.approved('second', true);
+  f.store.reservePaid(first.reference, first.approval.approvalId, 'first', 100, f.executor);
+  f.store.markStarted('tenant', 'first', f.executor);
+  f.store.reservePaid(second.reference, second.approval.approvalId, 'second', 100, f.executor);
+  f.store.reconcile('tenant', 'first', 101, f.executor);
+  f.reopen();
+  assert.throws(() => f.store.markStarted('tenant', 'second', f.executor), { code: 'BUDGET_BLOCKED' });
+  assert.equal(f.store.cancelBeforeStart('tenant', 'second', f.executor).state, 'cancelled');
+});
 test('custo real acima da reserva é registrado e bloqueia novas chamadas, mesmo após reinício', async t => {
   const f = await fixture(t, { paidEnabled: true, dailyLimitsMicros: { tenant: 1000 } });
   const first = f.approved('first', true);
