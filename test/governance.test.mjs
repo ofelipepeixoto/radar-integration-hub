@@ -182,6 +182,19 @@ test('cancelamento só antes de início; reconciliação persiste saldo e bloque
   const fourth = f.approved('fourth', true);
   assert.throws(() => f.store.reservePaid(fourth.reference, fourth.approval.approvalId, 'r4', 1, f.executor), { code: 'BUDGET_EXCEEDED' });
 });
+test('fronteira de início revalida expiração e revisão depois de reservar; reserva fica retida', async t => {
+  const f = await fixture(t, { paidEnabled: true, dailyLimitsMicros: { tenant: 1000 } });
+  const reference = f.submit('expiring', 1, true), approval = f.store.approve(reference, f.reviewer, { ttlMs: 1000 });
+  f.store.reservePaid(reference, approval.approvalId, 'expiring', 100, f.executor);
+  f.advance(1001);
+  assert.throws(() => f.store.markStarted('tenant', 'expiring', f.executor), { code: 'APPROVAL_EXPIRED' });
+  assert.equal(f.store.cancelBeforeStart('tenant', 'expiring', f.executor).state, 'cancelled');
+  const changed = f.approved('changed', true);
+  f.store.reservePaid(changed.reference, changed.approval.approvalId, 'changed', 100, f.executor);
+  f.submit('changed', 2, true);
+  assert.throws(() => f.store.markStarted('tenant', 'changed', f.executor), { code: 'PROPOSAL_CHANGED' });
+  assert.equal(f.store.cancelBeforeStart('tenant', 'changed', f.executor).state, 'cancelled');
+});
 test('custo real acima da reserva é registrado e bloqueia novas chamadas, mesmo após reinício', async t => {
   const f = await fixture(t, { paidEnabled: true, dailyLimitsMicros: { tenant: 1000 } });
   const first = f.approved('first', true);
