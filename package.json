@@ -7,6 +7,7 @@
   "engines": { "node": ">=22.13" },
   "author": "Carlos Felipe (ofelipepeixoto)",
   "scripts": { "test": "node --test", "demo": "node src/cli.mjs",
-    "demo:openclaw": "node src/openclaw-demo.mjs", "serve:readonly": "node src/service-cli.mjs" },
+    "demo:openclaw": "node src/openclaw-demo.mjs", "serve:readonly": "node src/service-cli.mjs",
+    "demo:research": "node src/research-demo.mjs", "test:research": "node --test research-tests/interop.mjs" },
   "license": "MIT"
 }

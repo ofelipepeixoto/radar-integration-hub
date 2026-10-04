@@ -1,0 +1,10 @@
+{
+  "schema": "radar-research-dependencies-v1",
+  "component": "radar-evidence-kit",
+  "repository": "https://github.com/ofelipepeixoto/radar-evidence-kit",
+  "commit": "2ffc5a407a29bf5d027142068709d64a2293d3ce",
+  "license": "MIT",
+  "mode": "offline-pinned-source",
+  "paidCallsEnabled": false,
+  "externalActionsEnabled": false
+}
