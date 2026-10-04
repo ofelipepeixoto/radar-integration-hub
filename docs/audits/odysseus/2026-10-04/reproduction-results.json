@@ -1,0 +1,31 @@
+{
+  "snapshot": "2992bf6d368a11472323e47d3bfed91e79cefc6b",
+  "probe_count": 5,
+  "findings": [
+    {
+      "id": "RAG_SOURCE_COLLAPSE",
+      "observed": "second source discarded for equal owner/text",
+      "records": 1
+    },
+    {
+      "id": "RAG_SCAN_ALL_OWNERS",
+      "observed": "backend fetch unscoped; output correctly scoped",
+      "records_fetched": 2
+    },
+    {
+      "id": "DNS_VALIDATION_NOT_PINNING",
+      "observed": "validated output is only URL; later private DNS is rejected by new validation",
+      "live_network_exploit": false
+    },
+    {
+      "id": "POSTGRES_MIGRATION_SKIPPED",
+      "observed": "legacy migration checks DSN as filesystem path and returns",
+      "postgres_connected": false
+    },
+    {
+      "id": "SHELL_CWD_NOT_SANDBOX",
+      "observed": "synthetic file outside cwd readable",
+      "real_user_data": false
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "schema": "radar-research-preview-v1",
+  "tenantId": "radar-demo",
+  "projectId": "research-demo",
+  "groups": [
+    {
+      "contentId": "477ca36637f9da40341facb802e5158143af4a1942bb1ee1cd5f96095dac9eb4",
+      "textSha256": "38022d5e5384eba7fd47caed46ec67be25dd370755a94d70a6f80bfb111aded2",
+      "text": "Prazo sintético: 30 dias. α🙂",
+      "occurrences": [
+        {
+          "occurrenceId": "7224ceed456c326ff73c40cb179e82b9646d43374266037ae9380ed2d3e66ba7",
+          "evidenceId": "593f34e8a7dc56b2175b75d334f115006e7f4fca9077855f17941298637f6a82",
+          "documentId": "doc-a",
+          "revision": 1,
+          "page": 1,
+          "start": 0,
+          "end": 28,
+          "sourceSha256": "1fb08630b1ed4e62fa4993f5961697dacaee177b8b4a2b87b5630f024d8b8435",
+          "quote": "Prazo sintético: 30 dias. α🙂"
+        },
+        {
+          "occurrenceId": "a74d3a458b8953d2dd4df86e83006167909f595b0862f2c8148359ce6648d659",
+          "evidenceId": "4dc576d9ea678c197dd10f47d242ec475a2a1b7e9f4e593ccde36ef2fcb3f79e",
+          "documentId": "doc-b",
+          "revision": 1,
+          "page": 1,
+          "start": 0,
+          "end": 28,
+          "sourceSha256": "23a638559f6c78931533029171f4a6f24c85fc174cb2e185bd91b8f37f68d8df",
+          "quote": "Prazo sintético: 30 dias. α🙂"
+        }
+      ]
+    }
+  ],
+  "includedOccurrences": 2,
+  "excludedRecords": 0,
+  "duplicateRecords": 0,
+  "decision": "needs_review",
+  "paidCallsEnabled": false,
+  "externalActionsEnabled": false,
+  "issuerVerified": false,
+  "scope": "offline-evidence-preview"
+}
