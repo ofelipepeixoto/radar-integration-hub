@@ -1,0 +1,126 @@
+{
+  "name": "Radar Hermes — worker interno somente leitura",
+  "active": false,
+  "nodes": [
+    {
+      "id": "radar-manual",
+      "name": "Iniciar consulta local",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "radar-request",
+      "name": "Preparar consulta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "function createN8nRequestId(executionId) {\n  if (typeof executionId !== 'string' || !/^[A-Za-z0-9_-]{1,60}$/.test(executionId)) {\n    throw new Error('INVALID_N8N_EXECUTION_ID');\n  }\n  return 'n8n_' + executionId;\n}\nreturn [{json:{version:\"radar.hermes.job.v1\",id:createN8nRequestId($execution.id),tool:\"radar_crm_preview\",arguments:{}}}];"
+      }
+    },
+    {
+      "id": "radar-http",
+      "name": "Consultar Hub interno",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        480,
+        0
+      ],
+      "retryOnFail": false,
+      "continueOnFail": false,
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8788/v1/hermes/preview",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 12000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "sendCredentialsOnCrossOriginRedirect": false,
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": false,
+              "neverError": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "radar-evidence",
+      "name": "Validar e exibir evidência",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "function hasExactKeys(value, keys) { return value !== null && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === keys.length && keys.every(key=>Object.hasOwn(value,key)); }\nfunction createN8nRequestId(executionId) {\n  if (typeof executionId !== 'string' || !/^[A-Za-z0-9_-]{1,60}$/.test(executionId)) {\n    throw new Error('INVALID_N8N_EXECUTION_ID');\n  }\n  return 'n8n_' + executionId;\n}\nfunction validateN8nPreviewResponse(value) {\n  const fail = () => { throw new Error('INVALID_HUB_PREVIEW_RESPONSE'); };\n  if (!hasExactKeys(value, ['tenantId', 'action', 'sampleCount', 'stages', 'hasMore', 'scope'])\n    || typeof value.tenantId !== 'string' || !/^[a-z0-9-]{1,64}$/.test(value.tenantId)\n    || value.action !== 'crm.deals.preview' || value.scope !== 'sample-only'\n    || !Number.isInteger(value.sampleCount) || value.sampleCount < 0 || value.sampleCount > 10\n    || typeof value.hasMore !== 'boolean'\n    || !value.stages || typeof value.stages !== 'object' || Array.isArray(value.stages)) fail();\n  const entries = Object.entries(value.stages);\n  if (entries.length > 10 || entries.some(([stage, count]) =>\n    !/^[A-Za-z0-9_-]{1,80}$/.test(stage)\n    || ['__proto__', 'constructor', 'prototype'].includes(stage)\n    || !Number.isInteger(count) || count < 1 || count > 10)\n    || entries.reduce((total, [, count]) => total + count, 0) !== value.sampleCount) fail();\n  // Project aggregate data only. Do not pass tenant identifiers or raw response through.\n  return {\n    scope: 'sample-only',\n    sampleCount: value.sampleCount,\n    stages: Object.fromEntries(entries),\n    hasMore: value.hasMore,\n    note: 'Amostra de até 10 negócios; não representa o funil completo nem receita.'\n  };\n}\nfunction validateHermesResponse(value) {\n  if (!value || value.version !== 'radar.hermes.result.v1' || value.ok !== true || value.paidCallsEnabled !== false\n    || typeof value.id !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(value.id)) throw new Error('INVALID_WORKER_RESULT');\n  const result = validateN8nPreviewResponse({ tenantId:'internal', action:'crm.deals.preview', ...value.result });\n  return { id: value.id, status:'review-required', paidCallsEnabled:false, result };\n}\nconst items=$input.all();\nif(items.length!==1 || items[0].json.id!==createN8nRequestId($execution.id)) throw new Error(\"INVALID_WORKER_RESULT\");\nreturn [{json:validateHermesResponse(items[0].json)}];"
+      }
+    }
+  ],
+  "connections": {
+    "Iniciar consulta local": {
+      "main": [
+        [
+          {
+            "node": "Preparar consulta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar consulta": {
+      "main": [
+        [
+          {
+            "node": "Consultar Hub interno",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar Hub interno": {
+      "main": [
+        [
+          {
+            "node": "Validar e exibir evidência",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 20
+  },
+  "pinData": {},
+  "tags": []
+}
