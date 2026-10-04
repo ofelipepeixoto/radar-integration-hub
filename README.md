@@ -94,3 +94,7 @@ O ledger fica em `.state/`, ignorado pelo Git. É uma proteção local por diret
 ## Autoria e licença
 
 Repositório independente, de **Carlos Felipe (`ofelipepeixoto`)**, com código original Radar e licença MIT para estes arquivos. Não inclui nem redistribui os núcleos do Nango ou OpenClaw. Nango é componente externo de Nango Inc, sob **Elastic License 2.0**. OpenClaw é componente externo da OpenClaw Foundation, sob **MIT**, avaliado na release `2026.9.7`. A MIT deste projeto não altera direitos sobre dependências, serviços e marcas. Veja [NOTICE](NOTICE.md) e [política de autoria](docs/AUTORIA.md).
+
+## Hermes: primeira integração verificável
+
+Plugin e worker determinístico de leitura governada implementados, sem chamadas de modelo. Testados localmente com registro real do Hermes fixado e HTTP real, usando CRM fictício. [Contrato, instalação e limites](docs/HERMES.md). [Workflow n8n inativo](integrations/n8n/hermes-job.workflow.json). Imagem, VPS e execução real no n8n ainda pendentes de homologação.
