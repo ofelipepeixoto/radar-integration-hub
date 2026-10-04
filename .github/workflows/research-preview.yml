@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: ofelipepeixoto/radar-evidence-kit
-          ref: 3008c8dbb3e950a7ba0c6794576880f91d85a65d
+          ref: 2ffc5a407a29bf5d027142068709d64a2293d3ce
           path: .audit-deps/radar-evidence-kit
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -27,5 +27,6 @@ jobs:
           RADAR_EVIDENCE_KIT_PATH: ${{ github.workspace }}/.audit-deps/radar-evidence-kit/src
           PYTHONDONTWRITEBYTECODE: '1'
         run: |
+          node scripts/verify-research-pin.mjs
           npm run test:research
           npm run demo:research

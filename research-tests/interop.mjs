@@ -49,6 +49,40 @@ test('troca de cliente/projeto/revisão e revisão pendente causam abstenção',
   }
 });
 
+test('recibos conflitantes da mesma ocorrência bloqueiam toda a prévia nas duas ordens', async t => {
+  for (const change of [{ review_status: 'rejected' }, { review_status: 'pending' },
+    { identity_verified: false }, { reviewer: '' }]) {
+    const approved = structuredClone(snapshot.evidence[0]);
+    const denied = { ...approved, ...change };
+    for (const records of [[approved, denied], [denied, approved]]) {
+      // An independent approved source must not produce a partial success.
+      const data = { ...snapshot, evidence: [...records, snapshot.evidence[1]] };
+      const { consumer } = await local(t, data);
+      await assert.rejects(consumer.execute({ requestId: 'conflicting' }, 'radar-demo'),
+        { code: 'EVIDENCE_PREVIEW_DENIED', message: 'EVIDENCE_PREVIEW_DENIED' });
+      await assert.rejects(consumer.execute({ requestId: 'conflicting' }, 'radar-demo'),
+        { code: 'DUPLICATE_REQUEST' });
+    }
+  }
+});
+
+test('conflitos fora do escopo não ocultam fontes atuais e replay exato permanece deduplicado', async t => {
+  const approved = structuredClone(snapshot.evidence[0]);
+  for (const change of [{ tenant_id: 'other' }, { project_id: 'other' },
+    { revision: 2 }, { document_id: 'unknown' }]) {
+    const excluded = { ...approved, ...change };
+    const data = { ...snapshot, evidence: [approved, approved, excluded,
+      { ...excluded, review_status: 'rejected' }] };
+    const { consumer } = await local(t, data);
+    const result = await consumer.execute({ requestId: 'scope-safe' }, 'radar-demo');
+    assert.equal(result.decision, 'needs_review');
+    assert.equal(result.includedOccurrences, 1);
+    assert.equal(result.excludedRecords, 2);
+    assert.equal(result.duplicateRecords, 1);
+    assert.equal(result.groups[0].occurrences[0].documentId, approved.document_id);
+  }
+});
+
 test('texto adulterado, payload desconhecido e JSON duplicado falham fechados', async t => {
   const data = structuredClone(snapshot); data.evidence[0].text += 'alterado';
   for (const input of [data, { ...snapshot, action: 'shell' }]) {

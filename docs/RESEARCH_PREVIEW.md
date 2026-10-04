@@ -8,7 +8,7 @@ mesmo texto Unicode; o resultado conserva duas ocorrências. Não há LLM ou
 resposta inventada: somente texto existente, referências e contagens.
 
 O kit utilizado está fixado em
-[`3008c8dbb3e950a7ba0c6794576880f91d85a65d`](https://github.com/ofelipepeixoto/radar-evidence-kit/tree/3008c8dbb3e950a7ba0c6794576880f91d85a65d),
+[`2ffc5a407a29bf5d027142068709d64a2293d3ce`](https://github.com/ofelipepeixoto/radar-evidence-kit/tree/2ffc5a407a29bf5d027142068709d64a2293d3ce),
 proposto na [PR #3](https://github.com/ofelipepeixoto/radar-evidence-kit/pull/3).
 O consumidor não instala nem modifica esse componente em execução.
 
@@ -18,7 +18,8 @@ Requer Node 22.13+ e Python 3.11+. Na raiz do Hub com esta PR aplicada:
 
 ```bash
 git clone https://github.com/ofelipepeixoto/radar-evidence-kit.git .audit-deps/radar-evidence-kit
-git -C .audit-deps/radar-evidence-kit checkout --detach 3008c8dbb3e950a7ba0c6794576880f91d85a65d
+git -C .audit-deps/radar-evidence-kit checkout --detach 2ffc5a407a29bf5d027142068709d64a2293d3ce
+RADAR_EVIDENCE_KIT_PATH="$PWD/.audit-deps/radar-evidence-kit/src" node scripts/verify-research-pin.mjs
 RADAR_EVIDENCE_KIT_PATH="$PWD/.audit-deps/radar-evidence-kit/src" npm run demo:research
 RADAR_EVIDENCE_KIT_PATH="$PWD/.audit-deps/radar-evidence-kit/src" npm run test:research
 npm test
@@ -56,6 +57,12 @@ de review/identidade sintéticas, por isso `issuerVerified` permanece falso.
 
 Registros de outro cliente/projeto, revisão antiga, desconhecidos, rejeitados,
 pendentes ou sem indicador de identidade são excluídos pelo kit antes de agrupar.
+Antes dessa exclusão, o kit compara todos os recibos da mesma ocorrência. Se
+uma ocorrência que seria incluída tiver decisão/revisor/identidade divergente,
+a prévia inteira falha com `EVIDENCE_PREVIEW_DENIED`, inclusive quando o outro
+recibo é inelegível e independentemente da ordem. Não é permitido selecionar a
+decisão mais recente pela posição no arquivo. Conflitos somente entre ocorrências
+excluídas pelo Scope não afetam fontes elegíveis independentes.
 Ausência de registros elegíveis produz `abstained`. Contratos inválidos não
 devolvem resultado parcial nem ecoam conteúdo/erro do processo.
 
@@ -68,9 +75,15 @@ permanece separada e desabilitada por padrão; não há provedor pago a integrar
 ## Evidência desta implementação
 
 Localmente: Hub **141 aprovados**; interoperabilidade Node/Python real **6
-aprovados**; kit **96 aprovados e 3 opcionais Semantica ignorados**. Os três
+aprovados** na primeira versão. Após a correção P1 de recibos conflitantes:
+Hub **141 aprovados**; interoperabilidade **8 aprovados**; kit **100 aprovados e
+3 opcionais Semantica ignorados**. Os três
 controles representam conjuntos diferentes. A CI executa a interoperabilidade
-com o commit acima fixado; seu status deve ser confirmado nos checks da PR.
+com o commit acima fixado e verifica que o checkout corresponde ao manifesto
+`research-dependencies.json`, sem alterações rastreadas. Esse preflight detecta
+divergência entre SHA do workflow e manifesto; não autentica o módulo/emissor nem
+garante segurança de arquivos locais não rastreados. Corrigir ou incorporar o
+Kit isoladamente não atualiza o Hub. O status deve ser confirmado nos checks da PR.
 
 O conjunto interop testa duas origens, Unicode, exclusão de escopo/review/revisão,
 payload/hash adulterado, JSON duplicado, falta de Python, tamanho de input,
