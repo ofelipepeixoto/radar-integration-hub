@@ -72,9 +72,12 @@ test('timeout e limite de saída funcionam durante a execução do processo fixo
   const { directory } = await local(t);
   const packagePath = join(directory, 'radar_evidence'); await mkdir(packagePath);
   await writeFile(join(packagePath, '__init__.py'), '');
-  for (const body of ['import time; time.sleep(5)', 'print("x" * (1024 * 1024 + 1))']) {
+  for (const { body, timeoutMs } of [
+    { body: 'import time; time.sleep(5)', timeoutMs: 100 },
+    { body: 'print("x" * (1024 * 1024 + 1))', timeoutMs: 3000 }
+  ]) {
     await writeFile(join(packagePath, 'research_preview.py'), body);
-    const { readEvidence } = await local(t, snapshot, { evidenceSourcePath: directory, timeoutMs: 100 });
+    const { readEvidence } = await local(t, snapshot, { evidenceSourcePath: directory, timeoutMs });
     await assert.rejects(readEvidence(), { code: 'EVIDENCE_PREVIEW_DENIED' });
   }
 });
