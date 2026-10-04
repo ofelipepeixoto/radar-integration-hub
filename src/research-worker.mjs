@@ -59,7 +59,10 @@ export function createOfflineEvidenceReader({ evidenceSourcePath, scopePath, sna
       });
       child.on('close', code => {
         if (code !== 0) return complete(true);
-        try { complete(false, JSON.parse(Buffer.concat(chunks).toString('utf8'))); }
+        // Bind validation to the exact input bytes captured before Python ran;
+        // do not reread a file that might have changed during the subprocess.
+        try { complete(false, { preview: JSON.parse(Buffer.concat(chunks).toString('utf8')),
+          snapshot: JSON.parse(input.toString('utf8')) }); }
         catch { complete(true); }
       });
       child.stdin.end(input);

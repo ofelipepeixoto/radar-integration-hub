@@ -16,9 +16,36 @@ function fields(value, names) {
 const count = value => Number.isSafeInteger(value) && value >= 0 && value <= 1000;
 const identifier = value => typeof value === 'string' && value.trim().length > 0
   && [...value].length <= 256 && Buffer.from(value, 'utf8').toString('utf8') === value;
+const evidenceFields = ['tenant_id', 'project_id', 'document_id', 'revision', 'page',
+  'start', 'end', 'text', 'source_sha256', 'text_sha256', 'review_status', 'reviewer',
+  'identity_verified'].sort();
 
-export function validateResearchPreview(result, tenantId, projectId) {
+function sourceEvidenceId(item) {
+  if (!fields(item, evidenceFields) || !identifier(item.tenant_id)
+    || !identifier(item.project_id) || !identifier(item.document_id)
+    || typeof item.text !== 'string' || Buffer.byteLength(item.text) > 16384
+    || Buffer.from(item.text, 'utf8').toString('utf8') !== item.text
+    || !Number.isSafeInteger(item.revision) || item.revision < 1
+    || !Number.isSafeInteger(item.page) || item.page < 1
+    || !Number.isSafeInteger(item.start) || item.start < 0
+    || !Number.isSafeInteger(item.end) || item.end <= item.start || item.end > [...item.text].length
+    || typeof item.source_sha256 !== 'string' || !HASH.test(item.source_sha256)
+    || item.text_sha256 !== digest(item.text)
+    || !['approved', 'pending', 'rejected'].includes(item.review_status)
+    || typeof item.reviewer !== 'string' || [...item.reviewer].length > 100
+    || Buffer.from(item.reviewer, 'utf8').toString('utf8') !== item.reviewer
+    || typeof item.identity_verified !== 'boolean') fail('EVIDENCE_PREVIEW_DENIED');
+  // Evidence v1 hashes every field using sorted ASCII keys, compact JSON and
+  // UTF-8. Review fields stay inside the reader/validator, outside the response.
+  return digest(JSON.stringify(Object.fromEntries(evidenceFields.map(key => [key, item[key]]))));
+}
+
+export function validateResearchPreview(result, tenantId, projectId, snapshot) {
   const denied = () => fail('EVIDENCE_PREVIEW_DENIED');
+  if (!fields(snapshot, ['schema', 'evidence']) || snapshot.schema !== 'radar-evidence-snapshot-v1'
+    || !Array.isArray(snapshot.evidence) || snapshot.evidence.length > 1000) denied();
+  const sourceIds = snapshot.evidence.map(sourceEvidenceId);
+  const sources = new Map(snapshot.evidence.map((item, index) => [sourceIds[index], item]));
   if (!fields(result, ['schema', 'tenantId', 'projectId', 'groups', 'includedOccurrences',
     'excludedRecords', 'duplicateRecords', 'decision', 'paidCallsEnabled',
     'externalActionsEnabled', 'issuerVerified', 'scope'])
@@ -28,10 +55,10 @@ export function validateResearchPreview(result, tenantId, projectId) {
     || result.scope !== 'offline-evidence-preview' || !Array.isArray(result.groups)
     || result.groups.length > 1000 || !count(result.includedOccurrences)
     || !count(result.excludedRecords) || !count(result.duplicateRecords)
-    || result.includedOccurrences + result.excludedRecords + result.duplicateRecords > 1000
+    || result.includedOccurrences + result.excludedRecords + result.duplicateRecords !== snapshot.evidence.length
     || result.decision !== (result.groups.length ? 'needs_review' : 'abstained')) denied();
   let total = 0;
-  const contentIds = new Set(), occurrenceIds = new Set();
+  const contentIds = new Set(), occurrenceIds = new Set(), evidenceIds = new Set();
   for (const group of result.groups) {
     if (!fields(group, ['contentId', 'textSha256', 'text', 'occurrences'])
       || typeof group.text !== 'string' || Buffer.byteLength(group.text) > 16384
@@ -54,12 +81,24 @@ export function validateResearchPreview(result, tenantId, projectId) {
         || item.quote !== characters.slice(item.start, item.end).join('')
         || item.occurrenceId !== digest(JSON.stringify(['radar-occurrence-v1', tenantId,
           projectId, item.documentId, item.revision, item.page, item.start, item.end,
-          item.sourceSha256, group.textSha256])) || occurrenceIds.has(item.occurrenceId)) denied();
+          item.sourceSha256, group.textSha256])) || occurrenceIds.has(item.occurrenceId)
+        || evidenceIds.has(item.evidenceId)) denied();
+      const source = sources.get(item.evidenceId);
+      if (!source || source.tenant_id !== tenantId || source.project_id !== projectId
+        || source.document_id !== item.documentId || source.revision !== item.revision
+        || source.page !== item.page || source.start !== item.start || source.end !== item.end
+        || source.source_sha256 !== item.sourceSha256 || source.text_sha256 !== group.textSha256
+        || source.text !== group.text || source.review_status !== 'approved'
+        || !source.reviewer.trim() || source.identity_verified !== true) denied();
+      evidenceIds.add(item.evidenceId);
       occurrenceIds.add(item.occurrenceId);
       if (++total > 1000) denied();
     }
   }
   if (total !== result.includedOccurrences) denied();
+  const represented = sourceIds.filter(id => evidenceIds.has(id)).length;
+  if (result.excludedRecords !== sourceIds.length - represented
+    || result.duplicateRecords !== represented - total) denied();
   // Structural integrity does not authenticate the source/reviewer or verify truth.
   return structuredClone(result);
 }
@@ -79,7 +118,7 @@ export function createResearchPreview({ tenantId, projectId, ledger, readEvidenc
       try { result = await readEvidence(); }
       catch { fail('EVIDENCE_PREVIEW_DENIED'); }
       return { requestId: request.requestId,
-        ...validateResearchPreview(result, tenantId, projectId) };
+        ...validateResearchPreview(result?.preview, tenantId, projectId, result?.snapshot) };
     }
   };
 }

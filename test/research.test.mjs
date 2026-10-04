@@ -8,7 +8,9 @@ import { FileLedger } from '../src/ledger.mjs';
 import { createResearchPreview, validateResearchPreview } from '../src/research-preview.mjs';
 
 const receipt = JSON.parse(await readFile(new URL('../fixtures/research/preview.json', import.meta.url), 'utf8'));
-const validate = value => validateResearchPreview(value, 'radar-demo', 'research-demo');
+const snapshot = JSON.parse(await readFile(new URL('../fixtures/research/snapshot.json', import.meta.url), 'utf8'));
+const validate = (value, source = snapshot) => validateResearchPreview(value, 'radar-demo', 'research-demo', source);
+const captured = () => ({ preview: receipt, snapshot });
 
 test('preserva duas origens para o mesmo texto Unicode e não altera o recibo do adapter', () => {
   const result = validate(receipt);
@@ -35,6 +37,8 @@ test('recusa conteúdo, referência, span, hash e duplicata adulterados', () => 
     x => { x.groups[0].occurrences[0].quote = 'invented'; },
     x => { x.groups[0].occurrences[0].start = 1; },
     x => { x.groups[0].occurrences[0].revision = 2; },
+    x => { x.groups[0].occurrences[0].evidenceId = 'a'.repeat(64); },
+    x => { x.groups[0].occurrences[1].evidenceId = x.groups[0].occurrences[0].evidenceId; },
     x => { x.groups[0].occurrences.push(x.groups[0].occurrences[0]); x.includedOccurrences++; },
     x => { x.groups[0].occurrences[0].documentId = ' '.repeat(3); }];
   for (const change of changes) {
@@ -46,7 +50,7 @@ test('recusa conteúdo, referência, span, hash e duplicata adulterados', () => 
 test('pedido não escolhe tenant, modelo, orçamento, ação ou fonte; falha antes do adapter', async () => {
   let calls = 0, reservations = 0;
   const consumer = createResearchPreview({ tenantId: 'radar-demo', projectId: 'research-demo',
-    ledger: { reserve: async () => { reservations++; } }, readEvidence: async () => { calls++; return receipt; } });
+    ledger: { reserve: async () => { reservations++; } }, readEvidence: async () => { calls++; return captured(); } });
   await assert.rejects(consumer.execute({ requestId: 'run' }, 'other'), { code: 'TENANT_DENIED' });
   for (const extra of [{ tenantId: 'other' }, { maximumCostMicros: 1 }, { model: 'paid' },
     { action: 'shell' }, { snapshotPath: '/private' }, { url: 'http://127.0.0.1' }]) {
@@ -60,7 +64,7 @@ test('reserva antes da leitura, persiste replay no mesmo dia e mantém orçament
   t.after(() => rm(directory, { recursive: true, force: true }));
   let calls = 0;
   const make = () => createResearchPreview({ tenantId: 'radar-demo', projectId: 'research-demo',
-    ledger: new FileLedger(directory), readEvidence: async () => { calls++; return receipt; } });
+    ledger: new FileLedger(directory), readEvidence: async () => { calls++; return captured(); } });
   const result = await make().execute({ requestId: 'persisted-run' }, 'radar-demo');
   assert.equal(result.paidCallsEnabled, false);
   assert.equal(result.externalActionsEnabled, false);
@@ -79,7 +83,31 @@ test('falha do adapter é sanitizada e continua consumindo a tentativa', async t
 
 test('ausência de fontes exige abstenção e configuração inválida não inicia consumo', () => {
   assert.equal(validate({ ...receipt, groups: [], includedOccurrences: 0,
-    excludedRecords: 0, duplicateRecords: 0, decision: 'abstained' }).decision, 'abstained');
+    excludedRecords: 2, duplicateRecords: 0, decision: 'abstained' }).decision, 'abstained');
   assert.throws(() => validate({ ...receipt, groups: [], decision: 'needs_review' }), { code: 'EVIDENCE_PREVIEW_DENIED' });
   assert.throws(() => createResearchPreview({}), { code: 'INVALID_RESEARCH_CONFIG' });
+});
+
+test('recibos ficam vinculados ao snapshot de origem sem expor os campos de revisão', () => {
+  for (const change of [{ reviewer: 'different' }, { review_status: 'rejected' },
+    { identity_verified: false }, { tenant_id: 'other' }]) {
+    const source = structuredClone(snapshot); Object.assign(source.evidence[0], change);
+    assert.throws(() => validate(receipt, source), { code: 'EVIDENCE_PREVIEW_DENIED' });
+  }
+  assert.throws(() => validateResearchPreview(receipt, 'radar-demo', 'research-demo'),
+    { code: 'EVIDENCE_PREVIEW_DENIED' });
+  const result = validate(receipt);
+  assert.equal(Object.hasOwn(result, 'snapshot'), false);
+  assert.equal(Object.hasOwn(result.groups[0].occurrences[0], 'reviewer'), false);
+});
+
+test('contagens reconciliam com o input e distinguem exclusão de replay exato', () => {
+  assert.throws(() => validate({ ...receipt, excludedRecords: 998 }), { code: 'EVIDENCE_PREVIEW_DENIED' });
+  const source = structuredClone(snapshot); source.evidence.push(source.evidence[0]);
+  assert.equal(validate({ ...receipt, duplicateRecords: 1 }, source).duplicateRecords, 1);
+  assert.throws(() => validate({ ...receipt, excludedRecords: 1 }, source), { code: 'EVIDENCE_PREVIEW_DENIED' });
+  const excluded = structuredClone(snapshot.evidence[0]); excluded.tenant_id = 'other';
+  const mixed = { ...snapshot, evidence: [...snapshot.evidence, excluded] };
+  assert.equal(validate({ ...receipt, excludedRecords: 1 }, mixed).excludedRecords, 1);
+  assert.throws(() => validate({ ...receipt, duplicateRecords: 1 }, mixed), { code: 'EVIDENCE_PREVIEW_DENIED' });
 });

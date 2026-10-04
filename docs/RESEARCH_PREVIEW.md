@@ -51,7 +51,14 @@ Não se trata de sandbox de SO: paths, módulo e Python devem ser confiáveis.
 
 A prévia é verificada novamente no Node: schema/escopo, contagens, SHA-256 do
 texto e identidade de ocorrências, quotes/spans por code point Unicode, repetição
-e flags de autoridade. Hashes não comprovam verdade ou autenticidade do original.
+e flags de autoridade. O reader retorna internamente `{preview, snapshot}`:
+o snapshot é capturado dos mesmos bytes enviados ao processo, sem reler o arquivo
+após a execução, e não entra na resposta de `execute`. O Node recalcula o
+`evidenceId` de todos os campos do registro original e confere a referência e
+seus dados, exigindo IDs únicos na saída. As contagens somam o número real de
+registros de entrada; exclusões e replays são reconciliados com os registros
+representados. Um reader personalizado deve fornecer esse envelope interno,
+nunca somente a prévia. Hashes não comprovam verdade ou autenticidade do original.
 Emissor/revisor/Scope precisam de autenticação externa; as fixtures usam flags
 de review/identidade sintéticas, por isso `issuerVerified` permanece falso.
 
@@ -76,7 +83,7 @@ permanece separada e desabilitada por padrão; não há provedor pago a integrar
 
 Localmente: Hub **141 aprovados**; interoperabilidade Node/Python real **6
 aprovados** na primeira versão. Após a correção P1 de recibos conflitantes:
-Hub **141 aprovados**; interoperabilidade **8 aprovados**; kit **100 aprovados e
+Hub **143 aprovados**; interoperabilidade **9 aprovados**; kit **100 aprovados e
 3 opcionais Semantica ignorados**. Os três
 controles representam conjuntos diferentes. A CI executa a interoperabilidade
 com o commit acima fixado e verifica que o checkout corresponde ao manifesto
@@ -87,7 +94,10 @@ Kit isoladamente não atualiza o Hub. O status deve ser confirmado nos checks da
 
 O conjunto interop testa duas origens, Unicode, exclusão de escopo/review/revisão,
 payload/hash adulterado, JSON duplicado, falta de Python, tamanho de input,
-timeout, teto de output durante processo e ausência de chaves herdadas.
+timeout, teto de output durante processo e ausência de chaves herdadas. Inclui
+conflitos de recibo nas duas ordens e falhas simuladas de um adapter Python que
+altera IDs ou contagens; esse último caso é injeção de falha, não comportamento
+atribuído ao Kit corrigido.
 
 ## Próximos gates
 

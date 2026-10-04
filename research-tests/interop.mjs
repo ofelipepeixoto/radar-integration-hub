@@ -124,5 +124,27 @@ test('processo não herda chaves do ambiente do Hub', async t => {
   process.env.RADAR_TEST_PRIVATE_VALUE = 'synthetic';
   t.after(() => { delete process.env.RADAR_TEST_PRIVATE_VALUE; });
   const { readEvidence } = await local(t, snapshot, { evidenceSourcePath: directory });
-  assert.deepEqual(await readEvidence(), { secretInherited: false });
+  const captured = await readEvidence();
+  assert.deepEqual(captured.preview, { secretInherited: false });
+  assert.deepEqual(captured.snapshot, snapshot);
+});
+
+test('falhas simuladas do adapter não podem alterar IDs ou contagens do snapshot real', async t => {
+  const receipt = JSON.parse(await readFile(join(root, 'fixtures/research/preview.json'), 'utf8'));
+  const { directory } = await local(t);
+  const packagePath = join(directory, 'radar_evidence'); await mkdir(packagePath);
+  await writeFile(join(packagePath, '__init__.py'), '');
+  for (const mutate of [
+    x => { x.groups[0].occurrences[0].evidenceId = 'a'.repeat(64); },
+    x => { x.groups[0].occurrences[1].evidenceId = x.groups[0].occurrences[0].evidenceId; },
+    x => { x.excludedRecords = 998; },
+    x => { x.duplicateRecords = 1; }
+  ]) {
+    const output = structuredClone(receipt); mutate(output);
+    await writeFile(join(packagePath, 'research_preview.py'),
+      `import json\nprint(json.dumps(json.loads(${JSON.stringify(JSON.stringify(output))})))`);
+    const { consumer } = await local(t, snapshot, { evidenceSourcePath: directory });
+    await assert.rejects(consumer.execute({ requestId: 'bad-adapter' }, 'radar-demo'),
+      { code: 'EVIDENCE_PREVIEW_DENIED' });
+  }
 });
