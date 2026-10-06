@@ -1,0 +1,53 @@
+{
+  "name": "Radar — estudo de workflow com controles locais",
+  "active": false,
+  "nodes": [
+    {
+      "id": "study-manual",
+      "name": "Iniciar estudo manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "study-preview",
+      "name": "Executar simulação limitada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Copyright (c) 2026 Carlos Felipe. SPDX-License-Identifier: MIT\n// Original Radar controls for trusted, bounded tasks; no Deer runtime.\nconst TYPES = new Set(['workflow:start','workflow:meta','workflow:end','workflow:error','workflow:phase:start','workflow:phase:end','log']);\n\n/** Project events to fixed fields; never export free text, paths, stacks or metadata. */\nfunction projectEvent(event) {\n  if (!event || !TYPES.has(event.type) || !Number.isSafeInteger(event.sequence) || event.sequence < 1) throw new Error('INVALID_EVENT');\n  const value = {type:event.type, sequence:event.sequence};\n  if (Number.isFinite(event.durationMs) && event.durationMs >= 0) value.durationMs=event.durationMs;\n  if(event.type==='workflow:error')value.code='WORKFLOW_FAILED';\n  return Object.freeze(value);\n}\n\n/** Sanitize before storage. A sink failure remains fail-closed and is not silently ignored. */\nfunction createSafeEventWriter(sink) {\n  if(typeof sink !== 'function')throw new Error('INVALID_SINK');\n  return async event => {\n    const line=JSON.stringify(projectEvent(event));\n    try {await sink(line);} catch {throw new Error('AUDIT_SINK_UNAVAILABLE');}\n  };\n}\n\n/** Bounded lazy scheduling for trusted tasks. Does not sandbox or kill running work. */\nasync function boundedMap(items, task, {concurrency=2,maxItems=20,signal}={}) {\n  if(!Array.isArray(items)||!Number.isSafeInteger(maxItems)||maxItems<1||maxItems>100||items.length>maxItems\n    ||!Number.isSafeInteger(concurrency)||concurrency<1||concurrency>4||typeof task!=='function')throw new Error('INVALID_BATCH');\n  signal?.throwIfAborted();\n  const results=new Array(items.length);let next=0;\n  const workers=Array.from({length:Math.min(concurrency,items.length)},async()=>{\n    while(next<items.length){\n      if(signal?.aborted)break;\n      const index=next++;\n      try {results[index]={ok:true,value:await task(items[index],index,signal)};}\n      catch {results[index]={ok:false,code:'TASK_FAILED'};}\n    }\n  });\n  await Promise.all(workers);\n  for(let index=0;index<results.length;index++)if(results[index]===undefined)results[index]={ok:false,code:'NOT_STARTED'};\n  return results;\n}\n\n// Copyright (c) 2026 Carlos Felipe. SPDX-License-Identifier: MIT\n// Declarative fixture contract, not a code executor or sandbox.\n\nfunction validateStudyPlan(plan) {\n  const keys = ['schemaVersion', 'action', 'concurrency', 'cases'];\n  if (!plan || typeof plan !== 'object' || Array.isArray(plan)\n    || ![Object.prototype, null].includes(Object.getPrototypeOf(plan))\n    || Object.keys(plan).length !== keys.length || keys.some(k => !Object.hasOwn(plan, k))\n    || plan.schemaVersion !== 1 || plan.action !== 'radar.fixture.batch'\n    || !Number.isSafeInteger(plan.concurrency) || plan.concurrency < 1 || plan.concurrency > 4\n    || !Array.isArray(plan.cases) || plan.cases.length < 1 || plan.cases.length > 20) {\n    throw new Error('INVALID_STUDY_PLAN');\n  }\n  // Array.from also rejects sparse arrays. Copy before any asynchronous work.\n  const cases = Array.from(plan.cases);\n  if (cases.some(value => !['success', 'null', 'failure'].includes(value))) throw new Error('INVALID_STUDY_PLAN');\n  return Object.freeze({schemaVersion: 1, action: 'radar.fixture.batch',\n    concurrency: plan.concurrency, cases: Object.freeze(cases)});\n}\n\nasync function runStudyPlan(input, {signal, sink = () => {}} = {}) {\n  const plan = validateStudyPlan(input);\n  signal?.throwIfAborted();\n  const events = [];\n  const write = createSafeEventWriter(async line => { await sink(line); events.push(JSON.parse(line)); });\n  await write({type: 'workflow:start', sequence: 1});\n  const results = await boundedMap(plan.cases, async value => {\n    if (value === 'failure') throw new Error('FIXTURE_FAILURE');\n    return value === 'null' ? null : {fixture: true};\n  }, {concurrency: plan.concurrency, maxItems: 20, signal});\n  await write({type: 'workflow:end', sequence: 2});\n  return {schemaVersion: 1, status: 'STUDY_ONLY', fixture: true,\n    action: plan.action, concurrency: plan.concurrency, results, events,\n    paidCallsEnabled: false, externalEffects: false, durableRecovery: false, sandboxed: false};\n}\n\nconst plan = {schemaVersion:1,action:\"radar.fixture.batch\",concurrency:2,cases:[\"success\",\"null\",\"failure\"]};\nreturn [{json: await runStudyPlan(plan)}];\n"
+      }
+    }
+  ],
+  "connections": {
+    "Iniciar estudo manual": {
+      "main": [
+        [
+          {
+            "node": "Executar simulação limitada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 15,
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false
+  },
+  "tags": []
+}
