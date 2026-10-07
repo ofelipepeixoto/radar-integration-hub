@@ -1,0 +1,212 @@
+diff --git a/src/background/browser/util.ts b/src/background/browser/util.ts
+index 1cedd0b..8a88383 100644
+--- a/src/background/browser/util.ts
++++ b/src/background/browser/util.ts
+@@ -1,93 +1,59 @@
+-/**
+- * Checks if a URL is allowed based on firewall configuration
+- * @param url The URL to check
+- * @param allowList The allow list
+- * @param denyList The deny list
+- * @returns True if the URL is allowed, false otherwise
+- */
+-export function isUrlAllowed(url: string, allowList: string[], denyList: string[]): boolean {
+-  // Normalize and validate input
+-  const trimmedUrl = url.trim();
+-  if (trimmedUrl.length === 0) {
+-    return false;
+-  }
+-
+-  const lowerCaseUrl = trimmedUrl.toLowerCase();
++// Modified by Carlos Felipe (with AI assistance), 2026-10-07.
++// Local audit candidate: canonical HTTP(S) validation and deny-first matching.
++// Original Nanobrowser source remains Apache-2.0. Not a network firewall.
++function canonicalHost(url: URL): string {
++  return url.hostname.toLowerCase().replace(/\.$/, '');
++}
+ 
+-  // ALWAYS block dangerous/forbidden URLs, even if firewall is disabled
+-  const DANGEROUS_PREFIXES = [
+-    'https://chromewebstore.google.com', // scripts are not allowed to be injected into chrome web store
+-    'chrome-extension://',
+-    'chrome://',
+-    'javascript:',
+-    'data:',
+-    'file:',
+-    'vbscript:',
+-    'ws:',
+-    'wss:',
+-  ];
++function hasControlOrSpace(value: string): boolean {
++  return [...value].some(char => char.charCodeAt(0) <= 32 || char.charCodeAt(0) === 127);
++}
+ 
+-  if (DANGEROUS_PREFIXES.some(prefix => lowerCaseUrl.startsWith(prefix))) {
++function matchesEntry(url: URL, entry: string): boolean {
++  const normalized = entry
++    .trim()
++    .toLowerCase()
++    .replace(/^https?:\/\//, '');
++  if (!normalized || hasControlOrSpace(normalized)) return false;
++  try {
++    const rule = new URL(`https://${normalized}`);
++    if (rule.username || rule.password) return false;
++    const host = canonicalHost(url);
++    const ruleHost = canonicalHost(rule);
++    const authority = normalized.split(/[/?#]/, 1)[0];
++    const explicitPort = authority.startsWith('[')
++      ? authority.match(/\]:(\d+)$/)?.[1]
++      : authority.match(/:(\d+)$/)?.[1];
++    // Domain rules include subdomains. IPv6 hosts stay intact.
++    if (!/[/?#]/.test(normalized) && explicitPort === undefined) {
++      return host === ruleHost || (!ruleHost.startsWith('[') && host.endsWith(`.${ruleHost}`));
++    }
++    const targetPort = url.port || (url.protocol === 'https:' ? '443' : '80');
++    if (explicitPort !== undefined && Number(explicitPort) !== Number(targetPort)) return false;
++    if (explicitPort === undefined && url.port) return false;
++    // Keep existing scheme-independent, case-insensitive path matching.
++    const resource = (value: URL) =>
++      `${canonicalHost(value)}${value.pathname}${value.search}${value.hash}`.toLowerCase();
++    return resource(url) === resource(rule);
++  } catch {
+     return false;
+   }
++}
+ 
+-  // If firewall is disabled, allow all other URLs
+-  if (allowList.length === 0 && denyList.length === 0) {
+-    return true;
+-  }
+-
+-  // Special case: Allow 'about:blank' explicitly
+-  if (trimmedUrl === 'about:blank') {
+-    return true;
+-  }
+-
++/** Validate every URL, including when no operator lists are configured. */
++export function isUrlAllowed(url: string, allowList: string[], denyList: string[]): boolean {
++  const trimmed = url.trim();
++  if (!trimmed || hasControlOrSpace(trimmed)) return false;
++  if (trimmed === 'about:blank') return true;
+   try {
+-    const parsedUrl = new URL(trimmedUrl);
+-
+-    // 1. Remove protocol prefix for further comparisons
+-    const urlWithoutProtocol = lowerCaseUrl.replace(/^https?:\/\//, '');
+-
+-    // 2. First check full URL against deny list
+-    for (const deniedEntry of denyList) {
+-      if (urlWithoutProtocol === deniedEntry) {
+-        return false;
+-      }
++    const parsed = new URL(trimmed);
++    if (!['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname || parsed.username || parsed.password) {
++      return false;
+     }
+-
+-    // 3. Check full URL against allow list
+-    for (const allowedEntry of allowList) {
+-      if (urlWithoutProtocol === allowedEntry) {
+-        return true;
+-      }
+-    }
+-
+-    // 4. Extract domain for domain-based checks
+-    let domain = parsedUrl.hostname.toLowerCase();
+-
+-    // Remove port number if present
+-    const portIndex = domain.indexOf(':');
+-    if (portIndex > -1) {
+-      domain = domain.substring(0, portIndex);
+-    }
+-
+-    // 5. Check domain against deny list
+-    for (const deniedEntry of denyList) {
+-      if (domain === deniedEntry || domain.endsWith(`.${deniedEntry}`)) {
+-        return false;
+-      }
+-    }
+-
+-    // 6. Check domain against allow list
+-    for (const allowedEntry of allowList) {
+-      if (domain === allowedEntry || domain.endsWith(`.${allowedEntry}`)) {
+-        return true;
+-      }
+-    }
+-
+-    // Default policy
+-    return allowList.length === 0;
+-  } catch (error) {
+-    // Invalid URL format - deny by default
++    if (canonicalHost(parsed) === 'chromewebstore.google.com') return false;
++    if (denyList.some(entry => matchesEntry(parsed, entry))) return false;
++    return allowList.length === 0 || allowList.some(entry => matchesEntry(parsed, entry));
++  } catch {
+     return false;
+   }
+ }
+diff --git a/src/background/browser/__tests__/urlPolicy.test.ts b/src/background/browser/__tests__/urlPolicy.test.ts
+new file mode 100644
+index 0000000..5ab5415
+--- /dev/null
++++ b/src/background/browser/__tests__/urlPolicy.test.ts
+@@ -0,0 +1,59 @@
++// Original audit regressions, Carlos Felipe (with AI assistance), 2026-10-07. Apache-2.0.
++import { describe, expect, it } from 'vitest';
++import { isUrlAllowed } from '../util';
++
++describe('URL policy regression', () => {
++  it('does not broaden a port-specific allow rule to other ports', () => {
++    expect(isUrlAllowed('https://example.com:8443/', ['example.com:443'], [])).toBe(false);
++    expect(isUrlAllowed('http://example.com/', ['example.com:443'], [])).toBe(false);
++    expect(isUrlAllowed('https://example.com/', ['example.com:443'], [])).toBe(true);
++  });
++  it('preserves a non-default port in an exact resource rule', () => {
++    expect(isUrlAllowed('http://example.com:8080/page', ['example.com:8080/page'], [])).toBe(true);
++    expect(isUrlAllowed('http://example.com:8081/page', ['example.com:8080/page'], [])).toBe(false);
++  });
++  it.each([
++    'not a url',
++    'java\nscript:alert(1)',
++    'javascript:alert(1)',
++    'data:text/plain,x',
++    'file:///tmp/x',
++    'ftp://example.com',
++    'https://user:pass@example.com/',
++    'https://example.com/a b',
++    '',
++  ])('rejects invalid/unsupported target %j', url => {
++    expect(isUrlAllowed(url, [], [])).toBe(false);
++  });
++  it.each(['https://blocked.example./', 'https://sub.blocked.example/', 'https://BLOCKED.EXAMPLE/'])(
++    'canonical deny covers %s',
++    url => {
++      expect(isUrlAllowed(url, [], ['blocked.example'])).toBe(false);
++    },
++  );
++  it('deny overrides exact resource allow', () => {
++    expect(isUrlAllowed('https://blocked.example/page', ['blocked.example/page'], ['blocked.example'])).toBe(false);
++  });
++  it('matches bracketed IPv6 addresses without truncation', () => {
++    expect(isUrlAllowed('http://[::1]/', [], ['[::1]'])).toBe(false);
++  });
++  it('does not confuse suffix lookalikes with an allowed subdomain', () => {
++    expect(isUrlAllowed('https://evilallowed.example/', ['allowed.example'], [])).toBe(false);
++    expect(isUrlAllowed('https://allowed.example.evil.test/', ['allowed.example'], [])).toBe(false);
++  });
++  it('allows an approved domain and its subdomains', () => {
++    expect(isUrlAllowed('https://sub.allowed.example/path', ['allowed.example'], [])).toBe(true);
++  });
++  it('allows valid web URLs when lists are empty', () => {
++    expect(isUrlAllowed('https://example.com/?x=1', [], [])).toBe(true);
++  });
++  it('preserves explicit blank tab support', () =>
++    expect(isUrlAllowed('about:blank', ['allowed.example'], [])).toBe(true));
++  it('blocks the web store by parsed hostname', () => {
++    expect(isUrlAllowed('https://chromewebstore.google.com./', [], [])).toBe(false);
++  });
++  it('matches only the configured resource when rule includes a path', () => {
++    expect(isUrlAllowed('https://example.com/page?x=1', ['example.com/page?x=1'], [])).toBe(true);
++    expect(isUrlAllowed('https://example.com/other', ['example.com/page?x=1'], [])).toBe(false);
++  });
++});
