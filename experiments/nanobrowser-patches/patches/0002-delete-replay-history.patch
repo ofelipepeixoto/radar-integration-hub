@@ -1,0 +1,120 @@
+diff --git a/src/storage/lib/chat/history.ts b/src/storage/lib/chat/history.ts
+index dd9fcb1..bbf63ca 100644
+--- a/src/storage/lib/chat/history.ts
++++ b/src/storage/lib/chat/history.ts
+@@ -1,3 +1,4 @@
++// Modified by Carlos Felipe (with AI assistance), 2026-10-07. Local audit candidate. Apache-2.0.
+ import { createStorage } from '../base/base';
+ import { StorageEnum } from '../base/enums';
+ import type {
+@@ -68,11 +69,12 @@ export function createChatHistoryStorage(): ChatHistoryStorage {
+     },
+ 
+     clearAllSessions: async (): Promise<void> => {
+-      const sessionsMeta = await chatSessionsMetaStorage.get();
+-      for (const sessionMeta of sessionsMeta) {
+-        const messagesStorage = getSessionMessagesStorage(sessionMeta.id);
+-        await messagesStorage.set([]);
+-      }
++      // Include orphaned replay entries left by older versions; preserve provider/settings keys.
++      const stored = await chrome.storage.local.get(null);
++      const keys = Object.keys(stored).filter(
++        key => key.startsWith('chat_messages_') || key.startsWith('chat_agent_step_'),
++      );
++      if (keys.length > 0) await chrome.storage.local.remove(keys);
+       await chatSessionsMetaStorage.set([]);
+     },
+ 
+@@ -154,12 +156,9 @@ export function createChatHistoryStorage(): ChatHistoryStorage {
+     },
+ 
+     deleteSession: async (sessionId: string): Promise<void> => {
+-      // Remove session from metadata
++      // Erase payloads before hiding metadata; propagate storage errors.
++      await chrome.storage.local.remove([getSessionMessagesKey(sessionId), getSessionAgentStepHistoryKey(sessionId)]);
+       await chatSessionsMetaStorage.set(prevSessions => prevSessions.filter(session => session.id !== sessionId));
+-
+-      // Remove the session's messages
+-      const messagesStorage = getSessionMessagesStorage(sessionId);
+-      await messagesStorage.set([]);
+     },
+ 
+     addMessage: async (sessionId: string, message: Message): Promise<ChatMessage> => {
+@@ -242,6 +241,8 @@ export function createChatHistoryStorage(): ChatHistoryStorage {
+     },
+ 
+     loadAgentStepHistory: async (sessionId: string): Promise<ChatAgentStepHistory | null> => {
++      const sessions = await chatSessionsMetaStorage.get();
++      if (!sessions.some(session => session.id === sessionId)) return null;
+       const agentStepHistoryStorage = getSessionAgentStepHistoryStorage(sessionId);
+       const history = await agentStepHistoryStorage.get();
+       if (!history || !history.task || !history.timestamp || history.history === '' || history.history === '[]')
+diff --git a/src/storage/lib/chat/__tests__/deletion.test.ts b/src/storage/lib/chat/__tests__/deletion.test.ts
+new file mode 100644
+index 0000000..ae9b7a2
+--- /dev/null
++++ b/src/storage/lib/chat/__tests__/deletion.test.ts
+@@ -0,0 +1,63 @@
++// Original audit regressions, Carlos Felipe (with AI assistance), 2026-10-07. Apache-2.0.
++import { beforeEach, describe, expect, it, vi } from 'vitest';
++
++const storage = vi.hoisted(() => {
++  const data: Record<string, unknown> = {};
++  const remove = vi.fn(async (keys: string[]) => {
++    keys.forEach(key => delete data[key]);
++  });
++  vi.stubGlobal('chrome', {
++    storage: {
++      local: {
++        get: async (keys: string[] | null) =>
++          keys === null ? { ...data } : Object.fromEntries(keys.filter(k => k in data).map(k => [k, data[k]])),
++        set: async (items: Record<string, unknown>) => {
++          Object.assign(data, structuredClone(items));
++        },
++        remove,
++        onChanged: { addListener: () => undefined },
++      },
++    },
++  });
++  return { data, remove };
++});
++const { chatHistoryStore } = await import('../history');
++describe('history deletion regression', () => {
++  beforeEach(() => {
++    for (const key of Object.keys(storage.data)) delete storage.data[key];
++    vi.clearAllMocks();
++  });
++  it('deletes replay and messages for the selected session only', async () => {
++    const a = await chatHistoryStore.createSession('a'),
++      b = await chatHistoryStore.createSession('b');
++    await chatHistoryStore.storeAgentStepHistory(a.id, 'PRIVATE_FIXTURE', '[{}]');
++    await chatHistoryStore.storeAgentStepHistory(b.id, 'OTHER_FIXTURE', '[{}]');
++    await chatHistoryStore.deleteSession(a.id);
++    expect(storage.data[`chat_agent_step_${a.id}`]).toBeUndefined();
++    expect(storage.data[`chat_messages_${a.id}`]).toBeUndefined();
++    expect(await chatHistoryStore.loadAgentStepHistory(a.id)).toBeNull();
++    expect((await chatHistoryStore.loadAgentStepHistory(b.id))?.task).toBe('OTHER_FIXTURE');
++  });
++  it('clear all removes legacy orphans while preserving settings', async () => {
++    const a = await chatHistoryStore.createSession('a');
++    await chatHistoryStore.storeAgentStepHistory(a.id, 'PRIVATE_FIXTURE', '[{}]');
++    storage.data.chat_agent_step_orphan = { task: 'ORPHAN_FIXTURE', history: '[{}]', timestamp: 1 };
++    storage.data['llm-api-keys'] = { fixture: true };
++    await chatHistoryStore.clearAllSessions();
++    expect(
++      Object.keys(storage.data).filter(k => k.startsWith('chat_agent_step_') || k.startsWith('chat_messages_')),
++    ).toEqual([]);
++    expect(storage.data['llm-api-keys']).toEqual({ fixture: true });
++    expect(await chatHistoryStore.getAllSessions()).toEqual([]);
++  });
++  it('does not load legacy orphan history', async () => {
++    storage.data.chat_agent_step_orphan = { task: 'ORPHAN_FIXTURE', history: '[{}]', timestamp: 1 };
++    expect(await chatHistoryStore.loadAgentStepHistory('orphan')).toBeNull();
++  });
++  it('propagates erase errors and keeps metadata available for retry', async () => {
++    const a = await chatHistoryStore.createSession('a');
++    storage.remove.mockRejectedValueOnce(new Error('fixture-storage-failure'));
++    await expect(chatHistoryStore.deleteSession(a.id)).rejects.toThrow('fixture-storage-failure');
++    expect(await chatHistoryStore.getSession(a.id)).not.toBeNull();
++  });
++});
