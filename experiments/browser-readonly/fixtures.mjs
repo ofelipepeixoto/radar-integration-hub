@@ -18,6 +18,7 @@ const pages = Object.freeze({
   post: html(script("fetch('/sink',{method:'POST',body:'synthetic'}).catch(()=>{});")),
   subresource: html('<img src="/sink">'),
   frame: html('<iframe src="/sink"></iframe>'),
+  inlineframe: html('<iframe src="about:blank"></iframe>'),
   websocket: html(script("new WebSocket('ws://'+location.host+'/sink');")),
   popup: html(script("window.open('/sink');")),
   foreign: html(script("fetch('http://localhost:'+location.port+'/sink').catch(()=>{});")),

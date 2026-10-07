@@ -91,6 +91,7 @@ async function browserText(url, body) {
       await context.routeWebSocket('**/*', async socket => { denied = true; await socket.close(); });
       context.on('page', page => {
         if (context.pages().length > 1) { denied = true; void page.close().catch(() => {}); }
+        page.on('frameattached', () => { denied = true; });
         page.on('download', download => { denied = true; void download.cancel().catch(() => {}); });
         page.on('dialog', dialog => { denied = true; void dialog.dismiss().catch(() => {}); });
       });

@@ -41,7 +41,7 @@ test('absolute HTTP timeout interrupts a response that never finishes promptly',
   await assert.rejects(collect('slow'), code('HTTP_TIMEOUT'));
   assert.ok(performance.now() - started < LIMITS.httpMs + 1000);
 });
-for (const id of ['post', 'subresource', 'frame', 'websocket', 'popup', 'foreign']) {
+for (const id of ['post', 'subresource', 'frame', 'inlineframe', 'websocket', 'popup', 'foreign']) {
   test(`real Chromium refuses ${id}; sink receives nothing`, async () => {
     await assert.rejects(collect(id, 'browser'), code('POLICY_DENIED'));
     assert.equal(lab.hits.some(hit => hit.path === '/sink'), false);
