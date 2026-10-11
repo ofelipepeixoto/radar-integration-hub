@@ -87,6 +87,7 @@ O ledger fica em `.state/`, ignorado pelo Git. É uma proteção local por diret
 
 ## Avaliação e evolução
 
+- [Estudo Dify de ciclo de vida](studies/dify/README.md): cancelamento antes do início, resultado incerto após início e diagnósticos sanitizados, com SQLite e ferramentas fictícias. Sem conexão ao Dify ou provedor.
 - [Avaliação técnica do Nango](docs/AVALIACAO_NANGO.md): segurança, escala, desempenho, inovação, licença e integração com os projetos Radar.
 - [Evidência do scanner](docs/AUDITORIA_NANGO.json): resultados de dependências do upstream fixado.
 - [Plano do piloto](docs/PILOTO.md): hipótese, métricas e critérios de avanço.
