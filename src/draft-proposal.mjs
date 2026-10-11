@@ -6,7 +6,7 @@ const fail = code => { throw new HubError(code); };
 
 // Evidence IDs are supplied by the trusted application, never discovered from model output.
 export function validateDraftProposal(raw, evidenceIds) {
-  if (!Array.isArray(evidenceIds) || evidenceIds.length > 100
+  if (!Array.isArray(evidenceIds) || evidenceIds.length < 1 || evidenceIds.length > 100
     || evidenceIds.some(id => typeof id !== 'string' || !ID.test(id))
     || new Set(evidenceIds).size !== evidenceIds.length) fail('INVALID_EVIDENCE_SCOPE');
   if (typeof raw !== 'string' || Buffer.byteLength(raw) > MAX_BYTES) return { ok: false, reason: 'INVALID_JSON' };

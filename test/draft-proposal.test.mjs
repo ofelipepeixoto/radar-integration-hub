@@ -3,11 +3,12 @@ import assert from 'node:assert/strict';
 import { validateDraftProposal, buildDraftProposal } from '../src/draft-proposal.mjs';
 const valid = JSON.stringify({ text: ' Draft ', evidenceIds: ['source-1'] });
 test('scope is validated before producer runs', async () => {
-  let calls = 0;
-  for (const evidenceIds of [null, ['bad/id'], ['source-1', 'source-1'], [1]]) {
+  for (const evidenceIds of [null, [], ['bad/id'], ['source-1', 'source-1'], [1]]) {
+    let calls = 0;
     await assert.rejects(buildDraftProposal({ evidenceIds, produce: () => { calls++; return valid; } }), { code: 'INVALID_EVIDENCE_SCOPE' });
+    assert.equal(calls, 0);
+    assert.throws(() => validateDraftProposal(valid, evidenceIds), { code: 'INVALID_EVIDENCE_SCOPE' });
   }
-  assert.equal(calls, 0);
 });
 test('valid draft stays unapproved and immutable', async () => {
   const result = await buildDraftProposal({ evidenceIds: ['source-1'], produce: () => valid });
