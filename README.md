@@ -94,3 +94,11 @@ O ledger fica em `.state/`, ignorado pelo Git. É uma proteção local por diret
 ## Autoria e licença
 
 Repositório independente, de **Carlos Felipe (`ofelipepeixoto`)**, com código original Radar e licença MIT para estes arquivos. Não inclui nem redistribui os núcleos do Nango ou OpenClaw. Nango é componente externo de Nango Inc, sob **Elastic License 2.0**. OpenClaw é componente externo da OpenClaw Foundation, sob **MIT**, avaliado na release `2026.9.7`. A MIT deste projeto não altera direitos sobre dependências, serviços e marcas. Veja [NOTICE](NOTICE.md) e [política de autoria](docs/AUTORIA.md).
+
+## Estudo openGym: proposta validada
+
+O [estudo aplicado](docs/OPENGYM_STUDY.md) acrescenta um construtor original de
+rascunhos locais: valida JSON e referências de evidência, permite um reparo e
+mantém a saída não aprovada. Não conecta LLM, n8n ou executor; a governança
+persistente existente continua separada. Código e testes em
+`src/draft-proposal.mjs` e `test/draft-proposal.test.mjs`.
