@@ -17,3 +17,11 @@ O servidor `src/service.mjs`, o transporte `plugins/openclaw-radar/tool.mjs`, os
 Referência de contrato e arquitetura: [OpenClaw Foundation / openclaw](https://github.com/openclaw/openclaw/tree/c074824a27c96d3983043f9eeb33823cd1772d8c), release `2026.9.7`, MIT, copyright 2026 OpenClaw Foundation. O entrypoint consome o SDK do host como dependência externa, sem vendorizá-lo. Não há vínculo oficial, parceria ou cessão de marca implícitos.
 
 Se uma versão futura redistribuir código OpenClaw ou outras dependências, deverá acompanhar seus avisos originais, incluindo avisos transitivos aplicáveis. A autoria dos componentes externos permanece com seus autores.
+
+## Referência VulnClaw
+
+O estudo em `studies/vulnclaw/` e seus testes são código original preparado para
+Carlos Felipe com assistência de IA. Estudam padrões de aprovação e evidências
+de [Netw0rkNoob/VulnClaw](https://github.com/Netw0rkNoob/VulnClaw/tree/0b34878f84b089b21fcf85ecd445315f14df0672),
+copyright 2026 UncleC, MIT. Não incorporam código, skills, assets ou engine do
+VulnClaw; a autoria e a marca externas continuam pertencendo aos seus titulares.
