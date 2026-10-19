@@ -1,0 +1,36 @@
+name: Browser readonly study
+on:
+  pull_request:
+    paths: ['experiments/browser-readonly/**', '.github/workflows/browser-readonly-study.yml']
+  push:
+    branches: [main, codex/browser-capture-study]
+    paths: ['experiments/browser-readonly/**', '.github/workflows/browser-readonly-study.yml']
+permissions:
+  contents: read
+jobs:
+  fixtures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: experiments/browser-readonly
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - run: npm run check
+      - run: node evaluate.mjs > results.local.json
+      - name: Publish synthetic measurements in job log and summary
+        run: |
+          cat results.local.json
+          {
+            echo '### Synthetic capture comparison — not a production benchmark'
+            echo '```json'
+            cat results.local.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

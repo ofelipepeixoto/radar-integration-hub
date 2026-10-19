@@ -1,0 +1,14 @@
+{
+  "name": "radar-browser-readonly-study",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "check": "node --test checks/*.check.mjs",
+    "evaluate": "node evaluate.mjs",
+    "browser:install": "playwright install chromium"
+  },
+  "devDependencies": { "playwright": "1.63.0" }
+}
