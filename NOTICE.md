@@ -1,5 +1,23 @@
 # Origem e limites das licenças
 
+## Auditoria Odysseus
+
+O contrato/consumidor de pesquisa offline em `src/research-*`, suas fixtures e
+testes são implementação original de Carlos Felipe / Radar sob MIT, usando o
+kit de evidências autoral MIT como componente externo. Não copiam o núcleo
+Odysseus. A referência é `odysseus-dev/odysseus` no commit
+`2992bf6d368a11472323e47d3bfed91e79cefc6b`, AGPL-3.0-or-later.
+
+**Exceção à licença MIT do código original:** o patch
+`docs/audits/odysseus/2026-10-04/proposed-rag-owner-filter.patch` modifica código
+AGPL upstream. Sua licença/obrigações e atribuição continuam aplicáveis; a cópia
+de `LICENSE-upstream-AGPL-3.0.txt` acompanha o pacote, inclusive no ZIP. A MIT do
+Hub não relicencia o patch, o texto da licença GNU ou outros materiais upstream.
+O relatório e scripts originais são materiais da auditoria, não declaração de
+autoria sobre o software examinado.
+
+## Integrações anteriores
+
 Radar Integration Hub é um projeto independente, de Carlos Felipe / ecossistema Radar. O código deste repositório foi escrito para este laboratório; não contém cópia do núcleo nem do SDK Nango.
 
 Referência técnica: [NangoHQ/nango](https://github.com/NangoHQ/nango), copyright Nango Inc. O projeto de origem usa [Elastic License 2.0](https://github.com/NangoHQ/nango/blob/7e61a4c97b5a638bcf01808016099de2fe2f9985/LICENSE). O adaptador deste laboratório usa o contrato HTTP documentado pelo fornecedor.

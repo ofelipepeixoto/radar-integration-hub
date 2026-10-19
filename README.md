@@ -4,7 +4,26 @@ Laboratório autoral de integrações governadas para o ecossistema Radar. Prime
 
 **Status:** laboratório local; demonstração com dados fictícios. O adaptador REST para Nango Cloud foi testado com transporte simulado, sem conta, OAuth ou CRM reais. O adaptador OpenClaw e o servidor de leitura foram exercitados por HTTP local real, com CRM fictício. O carregamento no Gateway OpenClaw ainda não foi homologado. Não há implantação em produção.
 
-## Executar
+## Estudo Odysseus e pesquisa offline
+
+A [auditoria de 30 seções](docs/audits/odysseus/2026-10-04/Auditoria-Odysseus-Ecossistema-Radar-2026-10-04.md)
+recomenda **B — STUDY**. O
+[pacote de reproduções e patch](docs/audits/odysseus/2026-10-04/Pacote-Verificacao-Odysseus-Radar-2026-10-04.zip)
+mantém a atribuição e licença AGPL do patch upstream. Isso não transforma os
+arquivos originais do Hub em cópia do Odysseus nem modifica o projeto externo.
+
+Foi adicionada uma prévia local original que consome o `radar-evidence-kit`:
+duas fontes para o mesmo texto permanecem rastreáveis; o cliente/projeto são
+configurados pelo operador; não há escolha de modelo, URL, custo ou ferramenta
+no pedido. O resultado é `needs_review` ou `abstained`, com gastos e ações
+externas desabilitados. Sem LLM, instalação de Odysseus, novo servidor HTTP,
+workflow ativo ou mudança de Supabase/VPS.
+
+`npm test` continua independente de Python e do kit. A demonstração e os testes
+de interoperabilidade exigem Python 3.11+ e o snapshot do kit descrito em
+[docs/RESEARCH_PREVIEW.md](docs/RESEARCH_PREVIEW.md).
+
+## Executar o laboratório CRM
 
 Requer Node.js 22.13 ou superior. Sem dependências npm externas, instalação ou chave de API para a demonstração.
 

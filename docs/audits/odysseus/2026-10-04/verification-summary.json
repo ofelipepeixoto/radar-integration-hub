@@ -1,0 +1,74 @@
+{
+  "date": "2026-10-04",
+  "mode": "AUDIT_AND_RECOMMEND",
+  "upstream": {
+    "repository": "odysseus-dev/odysseus",
+    "default_branch": "dev",
+    "sha": "2992bf6d368a11472323e47d3bfed91e79cefc6b"
+  },
+  "environment": {
+    "python": "3.12.14",
+    "node": "24.19.0",
+    "dependency_scope": "partial focused-test environment, not full application requirements",
+    "mcp": "1.30.0 (<2 per upstream requirements)"
+  },
+  "local": {
+    "upstream_focused": {
+      "passed": 145,
+      "failed": 0,
+      "warnings": 1,
+      "seconds": 1.78,
+      "log": "upstream-local-tests.txt"
+    },
+    "hub_focused": {
+      "passed": 52,
+      "failed": 0,
+      "sha": "93c88ffb297edae3f827a98fe2ffe7d59cff56aa",
+      "files": [
+        "test/governance.test.mjs",
+        "test/observability.test.mjs",
+        "test/runtime.test.mjs"
+      ]
+    },
+    "actual_patch_worktree": {
+      "passed": 3,
+      "failed": 0,
+      "seconds": 0.07,
+      "log": "patch-tests.txt"
+    },
+    "reproduction_probes": 5,
+    "python_compileall": "passed",
+    "javascript_syntax": {
+      "checked": 166,
+      "errors": 0
+    },
+    "pip_check": "No broken requirements found."
+  },
+  "remote_ci": {
+    "run_id": 36955024798,
+    "job_id": 110675988054,
+    "passed": 5945,
+    "skipped": 11,
+    "warnings": 8,
+    "seconds": 147.58,
+    "python": "3.11.16",
+    "evidence": "Authenticated GitHub job logs; not rerun locally"
+  },
+  "not_performed": [
+    "full requirements installation",
+    "Docker build/runtime",
+    "browser E2E",
+    "load tests",
+    "real Chroma",
+    "real PostgreSQL migration",
+    "live n8n",
+    "Supabase data/RLS advisor audit",
+    "paid inference",
+    "remote patch/PR/deploy"
+  ],
+  "decision": {
+    "primary": "B — STUDY",
+    "secondary": "D — INTEGRATE only after pilot gates",
+    "new_repository": "not recommended now"
+  }
+}

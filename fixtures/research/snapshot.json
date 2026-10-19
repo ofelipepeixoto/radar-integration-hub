@@ -1,0 +1,35 @@
+{
+  "schema": "radar-evidence-snapshot-v1",
+  "evidence": [
+    {
+      "document_id": "doc-a",
+      "end": 28,
+      "identity_verified": true,
+      "page": 1,
+      "project_id": "research-demo",
+      "review_status": "approved",
+      "reviewer": "synthetic-reviewer",
+      "revision": 1,
+      "source_sha256": "1fb08630b1ed4e62fa4993f5961697dacaee177b8b4a2b87b5630f024d8b8435",
+      "start": 0,
+      "tenant_id": "radar-demo",
+      "text": "Prazo sintético: 30 dias. α🙂",
+      "text_sha256": "38022d5e5384eba7fd47caed46ec67be25dd370755a94d70a6f80bfb111aded2"
+    },
+    {
+      "document_id": "doc-b",
+      "end": 28,
+      "identity_verified": true,
+      "page": 1,
+      "project_id": "research-demo",
+      "review_status": "approved",
+      "reviewer": "synthetic-reviewer",
+      "revision": 1,
+      "source_sha256": "23a638559f6c78931533029171f4a6f24c85fc174cb2e185bd91b8f37f68d8df",
+      "start": 0,
+      "tenant_id": "radar-demo",
+      "text": "Prazo sintético: 30 dias. α🙂",
+      "text_sha256": "38022d5e5384eba7fd47caed46ec67be25dd370755a94d70a6f80bfb111aded2"
+    }
+  ]
+}

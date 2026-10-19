@@ -1,0 +1,14 @@
+--- a/src/rag_vector.py
++++ b/src/rag_vector.py
+@@ -412,7 +412,10 @@
+             for lane_name, collection in self._active_collections():
+                 if collection.count() == 0:
+                     continue
+-                all_docs = collection.get(include=["documents", "metadatas"])
++                all_docs = collection.get(
++                    include=["documents", "metadatas"],
++                    **({"where": {"owner": owner}} if owner else {}),
++                )
+                 if not all_docs["ids"]:
+                     continue
+                 for i, doc in enumerate(all_docs["documents"]):

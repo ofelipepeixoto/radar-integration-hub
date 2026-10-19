@@ -1,0 +1,8 @@
+{
+  "tenant_id": "radar-demo",
+  "project_id": "research-demo",
+  "current_revisions": {
+    "doc-a": 1,
+    "doc-b": 1
+  }
+}
