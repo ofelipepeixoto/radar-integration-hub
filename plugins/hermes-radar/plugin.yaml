@@ -1,0 +1,8 @@
+name: radar-hub-readonly
+version: 0.1.0
+kind: standalone
+author: Carlos Felipe
+license: MIT
+description: Consulta CRM governada, somente leitura; sem chamadas de modelo.
+provides_tools:
+  - radar_crm_preview
