@@ -1,0 +1,11 @@
+{
+  "upstream": "https://github.com/nanobrowser/nanobrowser",
+  "commit": "ad47282a17ecdfb894745af093e0f7332fc1f71a",
+  "node": "24.19.0",
+  "pnpm": "10.34.6",
+  "files": {
+    "LICENSE-APACHE-2.0.txt": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "patches/0001-canonical-url-policy.patch": "ebcd54210462460f7ab97f2f9b6dfc67d03bae603be184eef9fb3f862540d423",
+    "patches/0002-delete-replay-history.patch": "799c4bf88b2004ea4ddd8335405543d1ed22564557c764e06bf73b33a395e79b"
+  }
+}
